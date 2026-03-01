@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caffe Panna Flavor Alerts</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      background: #faf8f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 2px 40px rgba(0,0,0,0.07);
+    }
+
+    .logo {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 32px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #e5e5e5;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #1a1a1a;
+      background: white;
+      margin-bottom: 18px;
+      transition: border-color 0.15s;
+      appearance: none;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #1a1a1a;
+    }
+
+    .select-wrap {
+      position: relative;
+    }
+
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-60%);
+      pointer-events: none;
+      color: #888;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #1a1a1a;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 4px;
+    }
+
+    button:hover { background: #333; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+
+    .message {
+      margin-top: 16px;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+
+    .message.success { color: #2a7a2a; }
+    .message.error { color: #c0392b; }
+
+    .fine-print {
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🍦</div>
+    <h1>Caffe Panna Flavor Alerts</h1>
+    <p class="subtitle">Get a daily text with today's gelato flavors — before they sell out.</p>
+
+    <form id="signup-form">
+      <label for="name">Name</label>
+      <input type="text" id="name" placeholder="Your name" required />
+
+      <label for="phone">Phone number</label>
+      <input type="tel" id="phone" placeholder="+1 (555) 000-0000" required />
+
+      <label for="location">Location</label>
+      <div class="select-wrap">
+        <select id="location" required>
+          <option value="">Choose a location</option>
+          <option value="brooklyn">Brooklyn</option>
+          <option value="manhattan">Manhattan</option>
+          <option value="both">Both</option>
+        </select>
+      </div>
+
+      <button type="submit" id="submit-btn">Subscribe — Free</button>
+    </form>
+
+    <div class="message" id="message"></div>
+
+    <p class="fine-print">
+      One text per location per day. Reply STOP at any time to unsubscribe.<br>
+      No spam, ever.
+    </p>
+  </div>
+
+  <script>
+    // Replace these with your actual Supabase project values
+    const SUPABASE_URL = 'https://uaeqdfoojeyosfgnuhto.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZXFkZm9vamV5b3NmZ251aHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzOTk5OTUsImV4cCI6MjA4Nzk3NTk5NX0.hw_xy2WdEva3fcOktX_WzAHlMeT4q3trLi_LOrwVASU';
+
+    const form = document.getElementById('signup-form');
+    const btn = document.getElementById('submit-btn');
+    const msg = document.getElementById('message');
+
+    function showMessage(text, type) {
+      msg.textContent = text;
+      msg.className = `message ${type}`;
+      msg.style.display = 'block';
+    }
+
+    function formatPhone(raw) {
+      // Strip everything except digits and leading +
+      const digits = raw.replace(/[^\d]/g, '');
+      return digits.length === 10 ? `+1${digits}` : `+${digits}`;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Subscribing…';
+
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        phone: formatPhone(document.getElementById('phone').value),
+        location: document.getElementById('location').value,
+      };
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/subscribers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          form.style.display = 'none';
+          showMessage('You\'re in! Expect your first text tomorrow morning. 🍦', 'success');
+        } else {
+          const err = await res.json();
+          if (err.code === '23505') {
+            showMessage('That number is already subscribed!', 'error');
+          } else {
+            showMessage('Something went wrong. Please try again.', 'error');
+          }
+          btn.disabled = false;
+          btn.textContent = 'Subscribe — Free';
+        }
+      } catch {
+        showMessage('Network error. Please try again.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Subscribe — Free';
+      }
+    });
+  </script>
+</body>
+</html>
