@@ -20,17 +20,28 @@ async def scrape_flavors(location: str) -> list[str]:
         page = await context.new_page()
 
         await page.goto(url, wait_until="networkidle", timeout=45000)
-        await page.wait_for_timeout(4000)  # extra wait for React to render
+        await page.wait_for_timeout(4000)
+
+        # DEBUG: print page title and all headings so we can find the right selectors
+        title = await page.title()
+        print(f"  [debug] page title: {title}")
+
+        all_headings = await page.query_selector_all("h1, h2, h3, h4")
+        print(f"  [debug] found {len(all_headings)} headings:")
+        for h in all_headings:
+            print(f"    - {(await h.inner_text()).strip()[:80]}")
+
+        # DEBUG: print full visible text (first 2000 chars)
+        body_text = await page.inner_text("body")
+        print(f"  [debug] page text snippet:\n{body_text[:2000]}")
 
         flavors = []
 
-        # Strategy 1: find sections whose heading contains ice cream keywords,
-        # then pull item names from inside that section
+        # Strategy 1: find sections whose heading contains ice cream keywords
         headings = await page.query_selector_all("h1, h2, h3, h4")
         for heading in headings:
             heading_text = (await heading.inner_text()).strip().lower()
             if any(kw in heading_text for kw in ICE_CREAM_KEYWORDS):
-                # walk up to the nearest section container
                 section = await heading.evaluate_handle(
                     """el => {
                         let node = el.parentElement;
@@ -69,7 +80,6 @@ async def scrape_flavors(location: str) -> list[str]:
 
         await browser.close()
 
-    # dedupe while preserving order
     seen = set()
     unique = []
     for f in flavors:
